@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List
 from . import models
 from sqlalchemy.orm import Session
-from .database import engine, SessionLocal, get_db
+from .database import engine, get_db
 
 models.Base.metadata.create_all(bind=engine)
 
