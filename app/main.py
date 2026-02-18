@@ -39,7 +39,7 @@ class Post(BaseModel):
 
 class PostUpdate(BaseModel):
     title: str
-    content: str
+    content: Optional[str]
     published: Optional[bool] = True
 
 
@@ -118,21 +118,28 @@ def delete_post(id: int, db: Session = Depends(get_db)) -> Response:
 
 
 @app.put("/posts/{id}")
-def update_post(id: int, post: PostUpdate) -> Dict[str, Any]:
-    cursor.execute(
-        "UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s  RETURNING *",
-        (post.title, post.content, post.published, id)
-    )
-    updated_post = cursor.fetchone()
-    conn.commit()
-    
-    print(updated_post)
-    if updated_post is None:
+def update_post(id: int, post: PostUpdate, db: Session = Depends(get_db)):
+    # cursor.execute(
+    #     "UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s  RETURNING *",
+    #     (post.title, post.content, post.published, id)
+    # )
+    # updated_post = cursor.fetchone()
+    # conn.commit()
+    # print(updated_post)
+
+    post_query = db.query(models.Post).filter(models.Post.id == id)
+
+    if post_query.first() is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f"The post with the id:{id} was not found"
-            )
+        )
+
+    # print(post.model_dump()
+    post_query.update(post.model_dump(exclude_unset=True))
+    db.commit()
+
     return {
-            "message" : "Post updated successfully",
-            "data": updated_post
+        "message": "Post updated successfully"
     }
+
