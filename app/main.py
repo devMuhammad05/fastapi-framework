@@ -1,11 +1,10 @@
 from fastapi import FastAPI, Body, status, HTTPException, Response, Depends
-from pydantic import BaseModel
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
 from datetime import datetime
-from typing import Optional, Dict, Any, List
 from . import models
+from . import schemas
 from sqlalchemy.orm import Session
 from .database import engine, get_db
 
@@ -32,17 +31,6 @@ while True:
         time.sleep(2)
 
 
-class Post(BaseModel):
-    title: str
-    content: str
-    published: bool
-
-class PostUpdate(BaseModel):
-    title: str
-    content: Optional[str]
-    published: Optional[bool] = True
-
-
 @app.get("/")
 def root(db: Session = Depends(get_db)):
     return {"message": "fast api is running"}
@@ -54,12 +42,11 @@ def get_posts(db: Session = Depends(get_db)) :
     # posts = cursor.fetchall()
 
     posts = db.query(models.Post).all()
-    print(posts)
-    return {"data": posts}
+    return posts
 
 
 @app.post("/posts", status_code = status.HTTP_201_CREATED)
-def create_posts(post: Post, db: Session = Depends(get_db)):
+def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db)):
     # cursor.execute(
     #     "INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *",
     #     (post.title, post.content, post.published)
@@ -73,10 +60,8 @@ def create_posts(post: Post, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_post)
 
-    return {
-        "data": new_post,
-        "message": "Post created successfully",
-    }
+    return new_post
+
 
 
 @app.get("/posts/{id}")
@@ -90,10 +75,7 @@ def get_post(id: int, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND, 
             detail=f"The post with the id:{id} was not found"
             )
-    return {
-            "message" : "Post retrieved successfully",
-            "data": post
-    }
+    return  post
 
 
 @app.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -118,7 +100,7 @@ def delete_post(id: int, db: Session = Depends(get_db)) -> Response:
 
 
 @app.put("/posts/{id}")
-def update_post(id: int, post: PostUpdate, db: Session = Depends(get_db)):
+def update_post(id: int, post: schemas.PostUpdate, db: Session = Depends(get_db)):
     # cursor.execute(
     #     "UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s  RETURNING *",
     #     (post.title, post.content, post.published, id)
@@ -139,7 +121,5 @@ def update_post(id: int, post: PostUpdate, db: Session = Depends(get_db)):
     post_query.update(post.model_dump(exclude_unset=True))
     db.commit()
 
-    return {
-        "message": "Post updated successfully"
-    }
+    return post_query.first() 
 
