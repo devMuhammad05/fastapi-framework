@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Body, status, HTTPException, Response, Depends
+from fastapi import FastAPI, status, HTTPException, Response, Depends
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
@@ -7,6 +7,7 @@ from . import models
 from . import schemas
 from sqlalchemy.orm import Session
 from .database import engine, get_db
+from typing import List
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -36,7 +37,7 @@ def root(db: Session = Depends(get_db)):
     return {"message": "fast api is running"}
 
 
-@app.get("/posts")
+@app.get("/posts", response_model=List[schemas.Post])
 def get_posts(db: Session = Depends(get_db)) :
     # cursor.execute("SELECT * FROM posts")
     # posts = cursor.fetchall()
@@ -45,7 +46,7 @@ def get_posts(db: Session = Depends(get_db)) :
     return posts
 
 
-@app.post("/posts", status_code = status.HTTP_201_CREATED)
+@app.post("/posts", status_code = status.HTTP_201_CREATED, response_model=schemas.Post)
 def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db)):
     # cursor.execute(
     #     "INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *",
@@ -64,7 +65,7 @@ def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db)):
 
 
 
-@app.get("/posts/{id}")
+@app.get("/posts/{id}", response_model=schemas.Post)
 def get_post(id: int, db: Session = Depends(get_db)):
     # cursor.execute("SELECT * FROM posts WHERE id = %s", (id,))
     # post = cursor.fetchone()
