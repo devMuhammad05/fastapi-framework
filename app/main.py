@@ -3,19 +3,15 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
 from datetime import datetime
-from . import models
-from . import schemas
+from . import models, schemas, utils
 from sqlalchemy.orm import Session
 from .database import engine, get_db
 from typing import List
-from pwdlib import PasswordHash
 
 
 models.Base.metadata.create_all(bind=engine)
-password_hash = PasswordHash.recommended()
 
 app = FastAPI()
-
 
 while True:
     try:
@@ -38,9 +34,6 @@ while True:
 
 @app.get("/")
 def root(db: Session = Depends(get_db)):
-    # hashed  = password_hash.hash("dummypassword")
-    # print(hashed)
-
     return {"message": "fast api is running"}
 
 
@@ -137,7 +130,7 @@ def update_post(id: int, post: schemas.PostUpdate, db: Session = Depends(get_db)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
     data = user.model_dump()
-    data["password"] = password_hash.hash(data["password"])
+    data["password"] = utils.hash(data["password"])
     new_user = models.User(**data)
     db.add(new_user)
     db.commit()
