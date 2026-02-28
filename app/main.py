@@ -8,10 +8,14 @@ from . import schemas
 from sqlalchemy.orm import Session
 from .database import engine, get_db
 from typing import List
+from pwdlib import PasswordHash
+
 
 models.Base.metadata.create_all(bind=engine)
+password_hash = PasswordHash.recommended()
 
 app = FastAPI()
+
 
 while True:
     try:
@@ -34,6 +38,9 @@ while True:
 
 @app.get("/")
 def root(db: Session = Depends(get_db)):
+    # hashed  = password_hash.hash("dummypassword")
+    # print(hashed)
+
     return {"message": "fast api is running"}
 
 
@@ -124,3 +131,16 @@ def update_post(id: int, post: schemas.PostUpdate, db: Session = Depends(get_db)
 
     return post_query.first() 
 
+
+
+@app.post("/users", status_code = status.HTTP_201_CREATED, response_model=schemas.UserOut)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+
+    data = user.model_dump()
+    data["password"] = password_hash.hash(data["password"])
+    new_user = models.User(**data)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return new_user
